@@ -10,7 +10,7 @@ public class OSproj {
   static LinkedList<pcb> readyQueue = new LinkedList<pcb>(); //Stores indices in order of priority
   //static LinkedList<pcb> waitQueue = new LinkedList<pcb>(); //Between ready and wait
   static LinkedList<block> mainMemory = new LinkedList<block>();
-  //static ArrayList<int> ioQueue = new ArrayList<int>(); //First come first serve. diff per dev?
+  static ArrayList<LinkedList<file>> IOQueue = new ArrayList<LinkedList<file>>();
   static pcb cpuProcess = null; 
   static BigInteger ramMemory = new BigInteger("4000000000");
   static BigInteger availableMemory = new BigInteger("4000000000");
@@ -34,11 +34,16 @@ public class OSproj {
     numDisks = Integer.parseInt(input);
     System.out.println();
     System.out.println();
+    for (int i=0; i<numDisks; i++) {
+      IOQueue.add(new LinkedList<file>());
+    }
   }
   public static void getInput() {
-    System.out.println("Getting INPUT");
+    //System.out.println("Getting INPUT");
     String input = s.next();
+
     if (input.equals("A")) {
+      block newBlock = null;
       int priority = Integer.parseInt(s.next());
       BigInteger memory_size = new BigInteger(s.next());
       /*Create new Process. Calculated a PID for this PCB etc
@@ -50,7 +55,7 @@ public class OSproj {
        //Look for a gap, best fit.
        Boolean succAdd = false;
        if (mainMemory.size() == 0) {
-        block  newBlock = new block(new BigInteger("0"),memory_size);
+        newBlock = new block(new BigInteger("0"),memory_size);
         mainMemory.add(newBlock); 
         succAdd=true;
        }
@@ -70,7 +75,7 @@ public class OSproj {
           if (((ramMemory.subtract(mainMemory.getLast().limit)).compareTo(memory_size)) > -1) {
             base = mainMemory.getLast().limit;
             limit = base.add(memory_size);
-            block newBlock = new block(base,limit);
+            newBlock = new block(base,limit);
             mainMemory.add(newBlock);
             succAdd = true;
           } else {
@@ -78,15 +83,16 @@ public class OSproj {
             return;
           }
         } else {
-          block newBlock = new block(mainMemory.get(gapIndex).limit,mainMemory.get(gapIndex).limit.add(memory_size));
-          mainMemory.add(newBlock);
+          newBlock = new block(mainMemory.get(gapIndex).limit,mainMemory.get(gapIndex).limit.add(memory_size));
+          mainMemory.add(gapIndex+1,newBlock);
           succAdd = true;
         }
       }
       if (succAdd == true) {
         //Update availableMemory
         availableMemory = availableMemory.subtract(memory_size);
-        pcb newPcb = new pcb(PIDCOUNT++,priority);
+        pcb newPcb = new pcb(PIDCOUNT++,priority,newBlock);
+        newBlock.usedBy = newPcb;
         processTable.add(newPcb);
         if (cpuProcess == null) {
           cpuProcess = newPcb; //Get index of just added pcb.
@@ -108,18 +114,38 @@ public class OSproj {
     } else if (input.equals("t")) { 
       /*Terminate the process currently using the CPU.
       pop from ReadyQueue. Make cpuProcess = that index.*/
-     //Go through readyQueue and look for highest priority.
-      //1 - Must delete memory spot (stored in pcb)
-      //2 - Must delete from processTable (While making sure that all other references in I/O, waiting, and ready queues are still correct)
-      //3 - Must assign next highest priority process to cpuProcess.
-       
+      mainMemory.remove(cpuProcess.ram);
+      processTable.remove(cpuProcess);
+      updateCpu();
     } else if (input.equals("d")) { 
-      int hardDisk = Integer.parseInt(s.next());
-      String file_name = s.next();
       /*Currently cpu running process reads/writes file, file_name, into hard disk #<hardDisk>*/
+      int diskNum = Integer.parseInt(s.next());
+      String file_name = s.next();
+      System.out.println("Writing " + file_name + " to hard disk # " + diskNum);
+      //Put cpuProcess into IOQueue with fileName.
+      IOQueue.get(diskNum).add(new file(cpuProcess,file_name)); 
+      updateCpu();   
     } else if (input.equals("D")) {
-      int hardDisk = Integer.parseInt(s.next());
       /* hard disk #<hardDisk> has finished the work for one process.*/  
+      int diskNum = Integer.parseInt(s.next());
+      System.out.println("Written file onto hard disk # " + diskNum);
+      file writtenFile = IOQueue.get(diskNum).pollFirst();
+      if (cpuProcess == null) {
+        cpuProcess = writtenFile.process; //Get index of just added pcb.
+        System.out.println("RUNNING PROCESS AT pid " + cpuProcess.pid);
+      } else {
+        /*Preemptive. If higher priority, stop current cpuprocess and put this one.*/
+        if (cpuProcess.priority < writtenFile.process.priority) {
+          //System.out.println("ddingrdy1         " + cpuProcess);
+          readyQueue.add(cpuProcess);
+          cpuProcess = writtenFile.process;
+          //System.out.println("RUNNING PROCESS AT pid " + cpuProcess.pid);
+        }
+        else {
+          //System.out.println("ddingrdy2         " + (processTable.size() - 1));
+          readyQueue.add(writtenFile.process);
+        }
+      }
     } else if (input.equals("S")) { 
       input = s.next();
       if (input.equals("r")) {
@@ -131,8 +157,16 @@ public class OSproj {
         displayMem();
       } else if (input.equals("i")) {
         /*Show processes curr using hardDisks and what processes waiting for them. filenamesetc*/
+        //Iterate through IOQueue
+        for (int i=0; i<IOQueue.size();i++) {
+          System.out.println("Showing operations on hardDisk " + i);
+          for (int j=0; j<IOQueue.get(i).size();j++) {
+            System.out.println("PID : " + IOQueue.get(i).get(j).process.pid + " |" + IOQueue.get(i).get(j).name);
+          }
+        }
       } else if (input.equals("m")) {
         /*Show state of memory. Range of memory addresses used by each process in system.*/
+        displayMem();
       } 
     } else if (input.equals("exit")) {
       System.out.println("Exiting Gracefully..");
@@ -155,26 +189,24 @@ public class OSproj {
   private static void displayMem() {
     System.out.println("Displaying Main Memory...");
     for (int i=0; i < mainMemory.size(); i++) {
-      System.out.println("MEM : " + mainMemory.get(i).base.toString() + " - " + mainMemory.get(i).limit.toString());
+      System.out.println("MEM : " + mainMemory.get(i).base.toString() + " - " + mainMemory.get(i).limit.toString() + " |  PID : " + mainMemory.get(i).usedBy.pid);
     } 
   }
-/*Pointless now, because adding entire pcb?*/
-/*
-  private static void addToReady(pcb nPr) {
-    //Compare processTable[pti]'s priority 
-    Boolean replaced = false;
-    for (int i=0; i < readyQueue.size(); i++) {
-      if (processTable.get(pti).priority < processTable.get(readyQueue.get(i)).priority) {
-        readyQueue.add(i,pti);
-        replaced = true;
-        break;
+  static void updateCpu() {
+    pcb highest = null;
+    for (int i=0; i<readyQueue.size(); i++) {
+      if (highest == null) {
+        highest = readyQueue.get(i);
+      } else {
+        if (highest.priority < readyQueue.get(i).priority) {
+          highest = readyQueue.get(i);
+        } 
       }
-    }
-    if (!replaced) {
-      readyQueue.add(pti);//If empty or new process is lowest priority, add to end.
+      readyQueue.remove(highest);
+      cpuProcess = highest;
+      //System.out.println("RUNNING PROCESS AT pid " + cpuProcess.pid);
     }
   }
-*/  
 } 
 
 
@@ -192,29 +224,12 @@ Each program should be represented by own PCB. Don't move around PCBs, store all
 
 */
 
-/*
-Add process? Make PCB, add to processTable.
-Place get the priority of process and go down ready queue until reach priority lower than new.
-Insert process there in the ready queue.
-
-*/
-
-
-
-/*
-Lets change processTable into a linked list. 
-*/
-
-
-/*
-Make so when create process, it makes a block for mainmemory. Default base = 0, limit = memory_size. Iterate through main_memory, looking for smallest gap.
-*/
 
 
 
 
+//Each hard drive that exists must have its own I/O queue.
+//Have array of queues, IOQueue, that hold linked lists?
+  
 
-/*
-SUBSTITUTE ALL INTEGERS IN ARRAY TO REFERENCES TO OBJECT
-Each object is actually a pointer. 
-*/
+
