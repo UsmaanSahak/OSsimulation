@@ -59,4 +59,24 @@ Physical Address = base register address + logical address/Virtual address.
 
 DEC 5th
 
-Memory Management
+Memory Management:
+Contiguous, so makes next to each other. When process done, merge block to main memory again. After a while, tehre will be gaps in between blocks. Use best fit to choose the gap that is big enough to hold new process, but has least waste.
+
+Need an arraylist of blocks, from base to limit.
+LinkedList MainMemory; //Make list of block objects
+
+struct block {
+  block(int newBase,newLimit) {
+    base = newBase;
+    limit = newLimit;
+  }
+  int base;
+  int limit;
+}
+
+
+Check if base is between 0 and memory_size. Check if limit is between 0 and memory_size.
+Iterate through memory to see if there is a gap where prev.limit < base and next.limit < next.base. int bestfit = next.base - prev.limit. gap = prev's index.
+Keep iterating through memory and calculate the fit, setting bestfit to be the smallest gap that passes above requirement.
+Crate a block object and squeeze it at the index in variable 'gap'.
+
