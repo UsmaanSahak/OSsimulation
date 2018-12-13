@@ -164,7 +164,7 @@ public class OSproj {
       if (input.equals("r")) {
         /*Show CPU process and ready queue processes. PID and priority.*/
         //displayPT();
-        if (cpuProcess == null) { System.out.println("No processes Running!"); }
+        if (cpuProcess == null) { System.out.println("No processes Running!"); return; }
         System.out.println("cpu PID:" + cpuProcess.pid + " PRIORITY:" + cpuProcess.priority);
         displayRQ();
         //displayMem();

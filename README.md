@@ -2,7 +2,9 @@ To compile, run:
 
 javac OSproj.java pcb.java
 
+To run, run:
 
+java OSproj
 
 To test, run:
 
