@@ -3,7 +3,7 @@ cat test.sh
 java OSproj << EOF
 4000000000
 5
-A 1 2
+A 1 1000000000
 A 5 2
 A 1 12
 d 1 a.txt

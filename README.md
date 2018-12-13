@@ -1,30 +1,12 @@
-Pre
-Ask:
-How much RAM memory is there on the simulated computer? (can be up to 4 billion, so use datatypes that do not overflow)
-How many hard disks does the simulated compute have (enumerations start at 0).
+To compile, run:
 
-Pres
-Listens for user inputs (no confirmation). User inputs signal some system events. Possible inputs are:
+javac OSproj.java pcb.java
 
-A priority memory_size
-'A' means new process has been creative. This process has a priority 'priority' and requires 'memory_size' bytes of memory. When choosing a PID for a new process start from 1 and go up. Do NOT reuse PIDs of the terminated processes.
 
-t
-Process currently using the CPU terminates. It leaves system immediately. Make sure you release te memory used by this process. When process is gone from sstem it is also gone from the page table. It can cause indees of some processes in page tbale to change. Must apply change of indexes to all affected processes in the CPU, ready-queue and I/O-queues.
 
-d number file_name
-THe process that that curretnly uses the CPU requrests the hard disk number 'number'. It wants to read or write the file 'file_name'.
+To test, run:
 
-D number Hard disk number 'number' has finished the work for one process.
-
-S r
-Shows a process currently using the CPU and processes waiting in the ready-queue. PID and priority show per process. Mark the process using the CPU.
-
-S i
-Shows what processes are currently using the hard disks and what processes are waiting to use them. For each busy hard disk show the process that uses it and show its I/O-queue.Make sure to display the filenames (from the d command) for each process. THe enumberation of hard disks start from -. Processes in I/)-queue should be displayed in the correct ueue order. Remember that our I/O-queues are FCFS.
-
-S m
-Shows the state of memory. SHow the range of memory addresses used by each process in the system.
+./test.sh
 
 
 
@@ -32,51 +14,23 @@ Shows the state of memory. SHow the range of memory addresses used by each proce
 
 
 
-Read up on race condition, mutexes, and semaphores.
-
-Scenarios:
-critical section, bounded-buffer, readers-writers, dining philosophers
-
-potential problems:
-race condition, deadlock
 
 
 
+Example Operation:
+
+Start program, make sure it can operate with 4 billion Bytes of memory
+<<How much memory?
+>>4000000000
+<<Number of disks?
+>>3
+>>A 5 1000000000
+>>S r
+<<Expect to see that process with PID 1 and priority 5 is in CPU
+>>A 8 123
+>>S r
+<< PID 2 in cpu now, 1 in ready queue, because preemptive.
+>>d 2 asd
 
 
-
-
-How do:
-
-Premptive priority CPU-scheduling. Higher numbers = higher priority. The one with the highest priority among available processes will be given the CPU next. 
-
-I/O on the other hand is just first come first serve. (Not preemptive scheduling)
-
-Assigns memory blocks haiving consecutive addresses. Uses base and limit registers.
-Physical Address = base register address + logical address/Virtual address.
-
-
-
-DEC 5th
-
-Memory Management:
-Contiguous, so makes next to each other. When process done, merge block to main memory again. After a while, tehre will be gaps in between blocks. Use best fit to choose the gap that is big enough to hold new process, but has least waste.
-
-Need an arraylist of blocks, from base to limit.
-LinkedList MainMemory; //Make list of block objects
-
-struct block {
-  block(int newBase,newLimit) {
-    base = newBase;
-    limit = newLimit;
-  }
-  int base;
-  int limit;
-}
-
-
-Check if base is between 0 and memory_size. Check if limit is between 0 and memory_size.
-Iterate through memory to see if there is a gap where prev.limit < base and next.limit < next.base. int bestfit = next.base - prev.limit. gap = prev's index.
-Keep iterating through memory and calculate the fit, setting bestfit to be the smallest gap that passes above requirement.
-Crate a block object and squeeze it at the index in variable 'gap'.
 

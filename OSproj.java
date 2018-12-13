@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 
 public class OSproj {
-  static int PIDCOUNT = 0;
+  static int PIDCOUNT = 1;
   static LinkedList<pcb> processTable = new LinkedList<pcb>();
   static LinkedList<pcb> readyQueue = new LinkedList<pcb>(); //Stores indices in order of priority
   //static LinkedList<pcb> waitQueue = new LinkedList<pcb>(); //Between ready and wait
@@ -114,10 +114,19 @@ public class OSproj {
     } else if (input.equals("t")) { 
       /*Terminate the process currently using the CPU.
       pop from ReadyQueue. Make cpuProcess = that index.*/
+      if (cpuProcess == null) {
+        System.out.println("Nothing running on CPU!");
+        return;
+      }
       mainMemory.remove(cpuProcess.ram);
       processTable.remove(cpuProcess);
+      cpuProcess = null;
       updateCpu();
     } else if (input.equals("d")) { 
+      if (cpuProcess == null) {
+        System.out.println("Nothing running on CPU!");
+        return;
+      }
       /*Currently cpu running process reads/writes file, file_name, into hard disk #<hardDisk>*/
       int diskNum = Integer.parseInt(s.next());
       String file_name = s.next();
@@ -129,6 +138,10 @@ public class OSproj {
       /* hard disk #<hardDisk> has finished the work for one process.*/  
       int diskNum = Integer.parseInt(s.next());
       System.out.println("Written file onto hard disk # " + diskNum);
+      if (IOQueue.get(diskNum).size() == 0) {
+        System.out.println("Nothing using disk!");
+        return;
+      }
       file writtenFile = IOQueue.get(diskNum).pollFirst();
       if (cpuProcess == null) {
         cpuProcess = writtenFile.process; //Get index of just added pcb.
@@ -150,18 +163,21 @@ public class OSproj {
       input = s.next();
       if (input.equals("r")) {
         /*Show CPU process and ready queue processes. PID and priority.*/
-        displayPT();
-        System.out.println("Displaying cpuProcess:");
-        System.out.println(cpuProcess.pid);
+        //displayPT();
+        if (cpuProcess == null) { System.out.println("No processes Running!"); }
+        System.out.println("cpu PID:" + cpuProcess.pid + " PRIORITY:" + cpuProcess.priority);
         displayRQ();
-        displayMem();
+        //displayMem();
       } else if (input.equals("i")) {
         /*Show processes curr using hardDisks and what processes waiting for them. filenamesetc*/
         //Iterate through IOQueue
         for (int i=0; i<IOQueue.size();i++) {
           System.out.println("Showing operations on hardDisk " + i);
-          for (int j=0; j<IOQueue.get(i).size();j++) {
-            System.out.println("PID : " + IOQueue.get(i).get(j).process.pid + " |" + IOQueue.get(i).get(j).name);
+          if (IOQueue.get(i).size() > 0) {
+            System.out.println("Current Device PID : " + IOQueue.get(i).get(0).process.pid + " |" + IOQueue.get(i).get(0).name);
+          }
+          for (int j=1; j<IOQueue.get(i).size();j++) {
+            System.out.println("Waiting PID : " + IOQueue.get(i).get(j).process.pid + " |" + IOQueue.get(i).get(j).name);
           }
         }
       } else if (input.equals("m")) {
@@ -180,10 +196,10 @@ public class OSproj {
     }
   }
   private static void displayRQ() {
-    System.out.println("Displaying Ready Queue...");
-    System.out.println("readyQueue.size(): " + readyQueue.size());
+    System.out.println("Displaying Ready Queue...(Size:" + readyQueue.size() + ")");
+    //System.out.println("readyQueue.size(): " + readyQueue.size());
     for (int i=0; i < readyQueue.size(); i++) {
-      System.out.println("RQ pid : " + readyQueue.get(i).pid); 
+      System.out.println("RQ pid:" + readyQueue.get(i).pid + " PRIORITY:" + readyQueue.get(i).priority); 
     }
   }
   private static void displayMem() {
